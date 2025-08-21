@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>???? ??????? - ???? ????? ????? ?????????</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body { min-height:100vh; display:flex; flex-direction:column; background:#f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+main { flex:1; }
+footer { background:#222; color:#fff; padding:10px; text-align:center; }
+.card-img-container { width:100%; height:300px; overflow:hidden; position:relative; border-radius:10px; }
+.card-img-container img { width:100%; height:100%; object-fit:contain; background:#fff; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="btn btn-success" href="#" target="_blank" id="endUserBtn">???? ???????</a>
+    <span class="navbar-brand mx-auto text-center" id="navbarTitle">?? ???? ???????</span>
+    <button class="btn btn-warning" id="langBtn">English</button>
+  </div>
+</nav>
+
+<main class="container my-4">
+  <h3 id="formTitle" class="mb-3">????? ???? ????</h3>
+  
+  <!-- ????? ?????? ?? ????? -->
+  <div id="message" class="mb-3"></div>
+
+  <form id="bookForm" class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" id="labelTitleAr">????? ?????? (????)</label>
+      <input type="text" class="form-control" id="titleAr" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelTitleEn">Book Title (English)</label>
+      <input type="text" class="form-control" id="titleEn" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelDescAr">??? ?????? (????)</label>
+      <textarea class="form-control" id="descAr" rows="2"></textarea>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelDescEn">Book Description (English)</label>
+      <textarea class="form-control" id="descEn" rows="2"></textarea>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelPrice">?????</label>
+      <input type="number" class="form-control" id="price" required>
+    </div>
+    <div class="col-12">
+      <label class="form-label" id="labelImage">????? ???? ??????</label>
+      <input type="file" class="form-control" id="image" accept="image/*" required>
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary w-100" id="addBtn">?????</button>
+    </div>
+  </form>
+
+  <hr class="my-4">
+  <h3 id="booksTitle">????? ?????</h3>
+  <div class="row" id="bookList"></div>
+</main>
+
+<footer>
+  &copy; 2025 ???? ?????? ??????
+</footer>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+<script>
+// ?? ?????? ????? Firebase ????? ?? ???
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_PROJECT_ID.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+let isArabic = true;
+
+// ????? ???? ???? ?? ????? ???? ?? ???
+document.getElementById("bookForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const messageEl = document.getElementById("message");
+  messageEl.innerHTML = "";
+
+  const file = document.getElementById("image").files[0];
+  if(!file){
+    messageEl.innerHTML = "<div class='alert alert-danger'>?????? ?????? ???? ??????</div>";
+    return;
+  }
+
+  const storageRef = storage.ref('books/' + Date.now() + '_' + file.name);
+  const uploadTask = storageRef.put(file);
+
+  uploadTask.on('state_changed', 
+    null,
+    (error)=>{
+      messageEl.innerHTML = "<div class='alert alert-danger'>??? ??? ?? ??? ??????: "+error.message+"</div>";
+    },
+    ()=>{
+      uploadTask.snapshot.ref.getDownloadURL().then((url)=>{
+        db.collection('books').add({
+          titleAr: document.getElementById("titleAr").value,
+          titleEn: document.getElementById("titleEn").value,
+          descriptionAr: document.getElementById("descAr").value,
+          descriptionEn: document.getElementById("descEn").value,
+          price: document.getElementById("price").value,
+          image: url,
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(()=>{
+          document.getElementById("bookForm").reset();
+          messageEl.innerHTML = "<div class='alert alert-success'>?? ????? ?????? ?????!</div>";
+        }).catch((err)=>{
+          messageEl.innerHTML = "<div class='alert alert-danger'>??? ??? ??? ????? ??????: "+err.message+"</div>";
+        });
+      }).catch((err)=>{
+        messageEl.innerHTML = "<div class='alert alert-danger'>??? ??? ??? ??? ???? ??????: "+err.message+"</div>";
+      });
+    }
+  );
+});
+
+// ??? ????? ??????
+db.collection('books').orderBy('timestamp','desc').onSnapshot(snapshot=>{
+  const list = document.getElementById("bookList");
+  list.innerHTML = "";
+  snapshot.forEach(doc=>{
+    const b = doc.data();
+    const title = isArabic ? b.titleAr : b.titleEn;
+    const desc = isArabic ? b.descriptionAr : b.descriptionEn;
+    const price = isArabic ? b.price+" ?.?" : "$"+b.price;
+    list.innerHTML += `
+    <div class="col-md-4 col-sm-6 mb-3" id="book-${doc.id}">
+      <div class="card h-100 shadow-sm">
+        <div class="card-img-container">
+          <img src="${b.image}" class="card-img-top" alt="Book">
+        </div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">${title}</h5>
+          <p class="card-text flex-grow-1">${desc}</p>
+          <p class="card-text"><strong>${price}</strong></p>
+          <button class="btn btn-danger btn-sm w-100 mb-2" onclick="deleteBook('${doc.id}')">???</button>
+        </div>
+      </div>
+    </div>`;
+  });
+});
+
+function deleteBook(id){
+  db.collection('books').doc(id).delete();
+}
+
+// ????? ?????
+document.getElementById("langBtn").addEventListener("click", ()=>{
+  isArabic = !isArabic;
+  document.documentElement.lang = isArabic ? "ar" : "en";
+  document.documentElement.dir = isArabic ? "rtl" : "ltr";
+
+  document.getElementById("formTitle").innerText = isArabic ? "????? ???? ????" : "Add New Book";
+  document.getElementById("labelTitleAr").innerText = isArabic ? "????? ?????? (????)" : "Book Title (Arabic)";
+  document.getElementById("labelTitleEn").innerText = isArabic ? "Book Title (English)" : "Book Title (English)";
+  document.getElementById("labelDescAr").innerText = isArabic ? "??? ?????? (????)" : "Book Description (Arabic)";
+  document.getElementById("labelDescEn").innerText = isArabic ? "Book Description (English)" : "Book Description (English)";
+  document.getElementById("labelPrice").innerText = isArabic ? "?????" : "Price";
+  document.getElementById("labelImage").innerText = isArabic ? "????? ???? ??????" : "Upload Book Image";
+  document.getElementById("addBtn").innerText = isArabic ? "?????" : "Add";
+  document.getElementById("booksTitle").innerText = isArabic ? "????? ?????" : "Book List";
+  document.querySelector('#navbarTitle').innerText = isArabic ? "?? ???? ???????" : "?? Admin Panel";
+  document.getElementById("endUserBtn").innerText = isArabic ? "???? ???????" : "Client Site";
+  document.getElementById("langBtn").innerText = isArabic ? "English" : "???????";
+});
+</script>
+
+</body>
+</html>
