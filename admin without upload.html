@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة المسؤول</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+body { min-height:100vh; display:flex; flex-direction:column; background:#f8f9fa; }
+main { flex:1; }
+footer { background:#222; color:#fff; padding:10px; text-align:center; }
+.card-img-container { width:100%; height:300px; overflow:hidden; position:relative; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:5rem; background:#fff; }
+</style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container d-flex justify-content-between align-items-center">
+    <a class="btn btn-success" href="https://laithhawabteh-create.github.io/UsedBookDelivery-/" target="_blank" id="endUserBtn">موقع العملاء</a>
+    <span class="navbar-brand mx-auto text-center" id="navbarTitle">📚 لوحة المسؤول</span>
+    <button class="btn btn-warning" id="langBtn">English</button>
+  </div>
+</nav>
+
+<main class="container my-4">
+  <h3 id="formTitle" class="mb-3">إضافة كتاب جديد</h3>
+  <form id="bookForm" class="row g-3" method="POST">
+    <div class="col-md-6">
+      <label class="form-label" id="labelTitleAr">عنوان الكتاب (عربي)</label>
+      <input type="text" class="form-control" id="titleAr" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelTitleEn">Book Title (English)</label>
+      <input type="text" class="form-control" id="titleEn" required>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelDescAr">وصف الكتاب (عربي)</label>
+      <textarea class="form-control" id="descAr" rows="2"></textarea>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelDescEn">Book Description (English)</label>
+      <textarea class="form-control" id="descEn" rows="2"></textarea>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" id="labelPrice">السعر</label>
+      <input type="number" class="form-control" id="price" required>
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary w-100" id="addBtn">إضافة</button>
+    </div>
+  </form>
+
+  <hr class="my-4">
+  <h3 id="booksTitle">قائمة الكتب</h3>
+  <div class="row" id="bookList"></div>
+</main>
+
+<footer>
+  &copy; 2025 جميع الحقوق محفوظة
+</footer>
+
+<script>
+let books = JSON.parse(localStorage.getItem('booksData')) || [];
+let isArabic = true;
+
+// استخدام صورة افتراضية للكتب
+const defaultImage = "📚";
+
+document.getElementById("bookForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  const book = {
+    titleAr: document.getElementById("titleAr").value,
+    titleEn: document.getElementById("titleEn").value,
+    descriptionAr: document.getElementById("descAr").value,
+    descriptionEn: document.getElementById("descEn").value,
+    price: document.getElementById("price").value,
+    image: defaultImage
+  };
+  books.push(book);
+  localStorage.setItem('booksData', JSON.stringify(books));
+  renderBooks();
+  document.getElementById("bookForm").reset();
+  window.dispatchEvent(new Event('storage'));
+});
+
+function renderBooks(){
+  const list = document.getElementById("bookList");
+  list.innerHTML = "";
+  books.forEach((b,i)=>{
+    const title = isArabic ? b.titleAr : b.titleEn;
+    const desc = isArabic ? b.descriptionAr : b.descriptionEn;
+    const price = isArabic ? b.price+" د.أ" : "$"+b.price;
+    list.innerHTML += `
+    <div class="col-md-4 col-sm-6 mb-3">
+      <div class="card h-100 shadow-sm">
+        <div class="card-img-container">${b.image}</div>
+        <div class="card-body d-flex flex-column">
+          <h5 class="card-title">${title}</h5>
+          <p class="card-text flex-grow-1">${desc}</p>
+          <p class="card-text"><strong>${price}</strong></p>
+          <button class="btn btn-danger btn-sm w-100 mb-2" onclick="deleteBook(${i})">حذف</button>
+        </div>
+      </div>`;
+  });
+}
+
+function deleteBook(index){
+  books.splice(index,1);
+  localStorage.setItem('booksData', JSON.stringify(books));
+  renderBooks();
+  window.dispatchEvent(new Event('storage'));
+}
+
+document.getElementById("langBtn").addEventListener("click", ()=>{
+  isArabic = !isArabic;
+  document.documentElement.lang = isArabic ? "ar" : "en";
+  document.documentElement.dir = isArabic ? "rtl" : "ltr";
+
+  document.getElementById("formTitle").innerText = isArabic ? "إضافة كتاب جديد" : "Add New Book";
+  document.getElementById("labelTitleAr").innerText = isArabic ? "عنوان الكتاب (عربي)" : "Book Title (Arabic)";
+  document.getElementById("labelTitleEn").innerText = isArabic ? "Book Title (English)" : "Book Title (English)";
+  document.getElementById("labelDescAr").innerText = isArabic ? "وصف الكتاب (عربي)" : "Book Description (Arabic)";
+  document.getElementById("labelDescEn").innerText = isArabic ? "Book Description (English)" : "Book Description (English)";
+  document.getElementById("labelPrice").innerText = isArabic ? "السعر" : "Price";
+  document.getElementById("addBtn").innerText = isArabic ? "إضافة" : "Add";
+  document.getElementById("booksTitle").innerText = isArabic ? "قائمة الكتب" : "Book List";
+  document.querySelector('#navbarTitle').innerText = isArabic ? "📚 لوحة المسؤول" : "📚 Admin Panel";
+  document.getElementById("endUserBtn").innerText = isArabic ? "موقع العملاء" : "Client Site";
+
+  renderBooks();
+});
+
+renderBooks();
+</script>
+
+</body>
+</html>
